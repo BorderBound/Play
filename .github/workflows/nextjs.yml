@@ -55,7 +55,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
       - name: Clone levels repository
-        run: git clone https://github.com/Flowit-Game/Levels.git
+        run: git clone https://github.com/BorderBound/assets.git
       - name: Install dependencies
         run: yarn
       - name: Convert levels from xml to typescript
