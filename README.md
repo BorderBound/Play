@@ -12,7 +12,7 @@ yarn
 
 Next clone the levels repository
 ```bash
-git clone https://github.com/BorderBound/Levels.git
+git clone https://github.com/BorderBound/assets.git
 ```
 
 Then convert the levels to the expected format
