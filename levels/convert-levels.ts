@@ -13,16 +13,13 @@ type LevelXML = {
   "@_solution"?: string;
 };
 
-type LevelSquare = {
+type SquareProps = {
   targetColor: string;
   color: string;
-  modifier: string;
+  modifier?: string;
 };
 
-type Level = {
-  grid: LevelSquare[][];
-  solution: string[] | null;
-};
+type Level = SquareProps[][];
 
 type LevelProgress = {
   status: string;
@@ -73,7 +70,6 @@ function serializeTS(value: unknown): string {
 ============================ */
 
 const LEVEL_PACKS = ["Easy", "Medium", "Hard", "Community"];
-
 const parser = new XMLParser({ ignoreAttributes: false });
 
 LEVEL_PACKS.forEach((pack) => {
@@ -84,6 +80,7 @@ LEVEL_PACKS.forEach((pack) => {
   const xmlLevels: LevelXML[] = parsed.levels.level;
 
   const levels: Level[] = [];
+  const solutions: (string[] | null)[] = [];
   const defaultProgress: LevelProgress[] = [];
 
   xmlLevels.forEach((level, index) => {
@@ -91,12 +88,10 @@ LEVEL_PACKS.forEach((pack) => {
     const modifierRows = level["@_modifier"].trim().split(" ");
 
     if (colorRows.length !== modifierRows.length) {
-      throw new Error(
-        `Row count mismatch in ${pack} level ${index}`
-      );
+      throw new Error(`Row mismatch in ${pack} level ${index}`);
     }
 
-    const grid: LevelSquare[][] = [];
+    const grid: Level = [];
 
     colorRows.forEach((row, y) => {
       const modRow = modifierRows[y];
@@ -107,13 +102,12 @@ LEVEL_PACKS.forEach((pack) => {
         );
       }
 
-      const rowSquares: LevelSquare[] = [];
+      const rowSquares: SquareProps[] = [];
 
-      [...row].forEach((char, x) => {
+      [...row].forEach((char) => {
         rowSquares.push({
           targetColor: colorMapping[char] ?? "Color.none",
           color: "Color.none",
-          modifier: "Modifier.none",
         });
       });
 
@@ -128,20 +122,20 @@ LEVEL_PACKS.forEach((pack) => {
 
         square.modifier = modifier;
 
-        if (modifier !== "Modifier.none") {
-          square.color = square.targetColor;
-        } else {
-          square.color = colorOverride ?? "Color.none";
-        }
+        square.color =
+          modifier !== "Modifier.none"
+            ? square.targetColor
+            : colorOverride ?? "Color.none";
       });
     });
 
-    const solution =
-      level["@_solution"]
-        ?.split(",")
-        .map((s) => s.trim()) ?? null;
+    levels.push(grid);
 
-    levels.push({ grid, solution });
+    solutions.push(
+      level["@_solution"]
+        ? level["@_solution"].split(",").map((s) => s.trim())
+        : null
+    );
 
     defaultProgress.push({
       status:
@@ -159,6 +153,9 @@ import { levelStatus, levelProgressProps } from "@/levels/levelsUtils";
 
 export const ${pack}Levels: Level[] =
 ${serializeTS(levels)}
+
+export const ${pack}Solutions: (string[] | null)[] =
+${JSON.stringify(solutions, null, 2)}
 
 export const ${pack}DefaultProgress: levelProgressProps[] =
 ${serializeTS(defaultProgress)}
