@@ -1,18 +1,18 @@
-# Flowit-react
-A clone of [Flowit](https://github.com/Flowit-Game/Flowit) using typescript / react / nextjs that can be played at [https://flowit-game.github.io/flowit-react/](https://flowit-game.github.io/flowit-react/)
+# BorderBound-react
+A clone of [BorderBound](https://github.com/BorderBound/BorderBound) using typescript / react / nextjs that can be played at [https://BorderBound.github.io/BorderBound-react/](https://BorderBound.github.io/BorderBound-react/)
 
 # Licensing
 Is licenced as AGPL-3.0.
 
 ## Getting Started
-To build flowit-react locally, first, install the node modules:
+To build BorderBound-react locally, first, install the node modules:
 ```bash
 yarn
 ```
 
 Next clone the levels repository
 ```bash
-git clone https://github.com/Flowit-Game/Levels.git
+git clone https://github.com/BorderBound/Levels.git
 ```
 
 Then convert the levels to the expected format
@@ -28,7 +28,7 @@ yarn dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Building a release
-Ensure you have downloaded and converted the levels. Then run 
+Ensure you have downloaded and converted the levels. Then run
 ```bash
 yarn next build
 yarn next export
