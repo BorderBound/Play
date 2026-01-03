@@ -1,5 +1,5 @@
 # BorderBound-react
-A clone of [BorderBound](https://github.com/BorderBound/BorderBound) using typescript / react / nextjs that can be played at [https://BorderBound.github.io/BorderBound-react/](https://BorderBound.github.io/BorderBound-react/)
+A clone of [BorderBound](https://github.com/BorderBound/BorderBound) using typescript / react / nextjs that can be played at [https://BorderBound.github.io/Play/](https://BorderBound.github.io/Play/)
 
 # Licensing
 Is licenced as AGPL-3.0.
