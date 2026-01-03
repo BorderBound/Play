@@ -54,12 +54,8 @@ jobs:
                   # If source files changed but packages didn't, rebuild from a prior cache.
                   restore-keys: |
                       ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
-            - name: Clone levels repository
-              run: git clone https://github.com/BorderBound/assets.git Levels
             - name: Install dependencies
               run: yarn
-            - name: Convert levels from xml to typescript
-              run: yarn convert-levels
             - name: Build with Next.js
               run: yarn next build
             - name: Upload artifact
