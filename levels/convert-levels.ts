@@ -1,92 +1,170 @@
 import fs from "fs";
-import {XMLParser} from "fast-xml-parser";
-import {levelProgressProps} from "@/levels/levelsUtils";
+import { XMLParser } from "fast-xml-parser";
+import path from "path";
 
-type levelDataProps = {
+/* ============================
+   Types
+============================ */
+
+type LevelXML = {
   "@_number": string;
   "@_color": string;
   "@_modifier": string;
+  "@_solution"?: string;
 };
 
-type levelSquareProps = {
-  targetColor: string,
-  modifier?: string,
-  color?: string,
+type LevelSquare = {
+  targetColor: string;
+  color: string;
+  modifier: string;
+};
+
+type Level = {
+  grid: LevelSquare[][];
+  solution: string[] | null;
+};
+
+type LevelProgress = {
+  status: string;
+  best: number | null;
+};
+
+/* ============================
+   Mappings
+============================ */
+
+const colorMapping: Record<string, string> = {
+  r: "Color.red",
+  g: "Color.green",
+  b: "Color.blue",
+  o: "Color.yellow",
+  d: "Color.indigo",
+  "0": "Color.none",
+  X: "Color.none",
+};
+
+const modifierMapping: Record<string, string> = {
+  "0": "Modifier.none",
+  U: "Modifier.up",
+  R: "Modifier.right",
+  D: "Modifier.down",
+  L: "Modifier.left",
+  w: "Modifier.rotateUp",
+  x: "Modifier.rotateRight",
+  s: "Modifier.rotateDown",
+  a: "Modifier.rotateLeft",
+  F: "Modifier.circle",
+  B: "Modifier.bomb",
+};
+
+/* ============================
+   Helpers
+============================ */
+
+function serializeTS(value: unknown): string {
+  return JSON.stringify(value, null, 2)
+    .replace(/"Color\.(\w+)"/g, "Color.$1")
+    .replace(/"Modifier\.(\w+)"/g, "Modifier.$1")
+    .replace(/"levelStatus\.(\w+)"/g, "levelStatus.$1");
 }
 
-const colorMapping = {
-  "r": "Color.red",
-  "g": "Color.green",
-  "b": "Color.blue",
-  "o": "Color.yellow ",
-  "d": "Color.indigo ",
-  "0": "Color.none",
-  "X": "Color.none",
-};
+/* ============================
+   Main
+============================ */
 
-const modifierMapping = {
-  "0": "Modifier.none",
-  "U": "Modifier.up",
-  "R": "Modifier.right",
-  "D": "Modifier.down",
-  "L": "Modifier.left",
-  "w": "Modifier.rotateUp",
-  "x": "Modifier.rotateRight",
-  "s": "Modifier.rotateDown",
-  "a": "Modifier.rotateLeft",
-  "F": "Modifier.circle",
-  "B": "Modifier.bomb",
-};
+const LEVEL_PACKS = ["Easy", "Medium", "Hard", "Community"];
 
+const parser = new XMLParser({ ignoreAttributes: false });
 
-["Easy", "Medium", "Hard", "Community"].forEach((levelPack) => {
-  const XMLFile = fs.readFileSync(`./Levels/levels${levelPack}.xml`, "utf-8");
-  const levels: Array<Array<Array<levelSquareProps>>> = [];
-  const defaultLevelProgress: Array<levelProgressProps> = [];
-  const parser = new XMLParser({ignoreAttributes: false});
-  const levelObj = parser.parse(XMLFile);
+LEVEL_PACKS.forEach((pack) => {
+  const xmlPath = path.join("levels", `levels${pack}.xml`);
+  const xml = fs.readFileSync(xmlPath, "utf8");
 
-  levelObj["levels"]["level"].forEach(
-    (levelData: levelDataProps, levelNumber: number) => {
-      levels.push([]);
-      //@ts-ignore
-      defaultLevelProgress.push({status: levelNumber < 5 ? "levelStatus.unlocked" : "levelStatus.locked", best: null})
-      const colours = levelData["@_color"].split("\n");
-      colours.forEach((line, lineNumber: number) => {
-        levels[levelNumber].push([]);
-        Array.from(line.trim()).forEach((color) => {
-          levels[levelNumber][lineNumber].push({
-            //@ts-ignore
-            targetColor: colorMapping[color] || "Color.none",
-          });
-        });
-      });
-      const modifiers = levelData["@_modifier"].split("\n");
-      modifiers.forEach((line, lineNumber: number) => {
-        Array.from(line.trim()).forEach((modifier, squareNumber: number) => {
-          //@ts-ignore
-          const mod = modifierMapping[modifier] || "Modifier.none";
-          //@ts-ignore
-          const color = colorMapping[modifier] || "Color.none"
-          levels[levelNumber][lineNumber][squareNumber].modifier = mod;
-          if (mod !== "Modifier.none") {
-            levels[levelNumber][lineNumber][squareNumber].color =
-              levels[levelNumber][lineNumber][squareNumber].targetColor;
-          } else {
-            levels[levelNumber][lineNumber][squareNumber].color = color
-          }
-        });
-      });
+  const parsed = parser.parse(xml);
+  const xmlLevels: LevelXML[] = parsed.levels.level;
+
+  const levels: Level[] = [];
+  const defaultProgress: LevelProgress[] = [];
+
+  xmlLevels.forEach((level, index) => {
+    const colorRows = level["@_color"].trim().split(" ");
+    const modifierRows = level["@_modifier"].trim().split(" ");
+
+    if (colorRows.length !== modifierRows.length) {
+      throw new Error(
+        `Row count mismatch in ${pack} level ${index}`
+      );
     }
-  );
 
-  // Stringify, and remove double quotes
-  const unquotedLevels = JSON.stringify(levels).replace(/"+/g, "");
-  const unquotedProgress = JSON.stringify(defaultLevelProgress).replace(/"+/g, "");
-  const outputString = `import { Color, Modifier } from "@/components/Square/Square";
-  import {Level} from "@/components/Game/Game";
-  import {levelStatus, levelProgressProps} from "@/levels/levelsUtils";
-  export const ${levelPack}Levels: Array<Level> = ${unquotedLevels}
-  export const ${levelPack}DefaultProgress: Array<levelProgressProps> = ${unquotedProgress}`;
-  fs.writeFileSync(`./levels/${levelPack}.ts`, outputString);
-})
+    const grid: LevelSquare[][] = [];
+
+    colorRows.forEach((row, y) => {
+      const modRow = modifierRows[y];
+
+      if (row.length !== modRow.length) {
+        throw new Error(
+          `Column mismatch in ${pack} level ${index}, row ${y}`
+        );
+      }
+
+      const rowSquares: LevelSquare[] = [];
+
+      [...row].forEach((char, x) => {
+        rowSquares.push({
+          targetColor: colorMapping[char] ?? "Color.none",
+          color: "Color.none",
+          modifier: "Modifier.none",
+        });
+      });
+
+      grid.push(rowSquares);
+    });
+
+    modifierRows.forEach((row, y) => {
+      [...row].forEach((char, x) => {
+        const square = grid[y][x];
+        const modifier = modifierMapping[char] ?? "Modifier.none";
+        const colorOverride = colorMapping[char];
+
+        square.modifier = modifier;
+
+        if (modifier !== "Modifier.none") {
+          square.color = square.targetColor;
+        } else {
+          square.color = colorOverride ?? "Color.none";
+        }
+      });
+    });
+
+    const solution =
+      level["@_solution"]
+        ?.split(",")
+        .map((s) => s.trim()) ?? null;
+
+    levels.push({ grid, solution });
+
+    defaultProgress.push({
+      status:
+        index < 5
+          ? "levelStatus.unlocked"
+          : "levelStatus.locked",
+      best: null,
+    });
+  });
+
+  const output = `
+import { Color, Modifier } from "@/components/Square/Square";
+import { Level } from "@/components/Game/Game";
+import { levelStatus, levelProgressProps } from "@/levels/levelsUtils";
+
+export const ${pack}Levels: Level[] =
+${serializeTS(levels)}
+
+export const ${pack}DefaultProgress: levelProgressProps[] =
+${serializeTS(defaultProgress)}
+`;
+
+  const outPath = path.join("levels", `${pack}.ts`);
+  fs.writeFileSync(outPath, output.trim() + "\n");
+  console.log(`✓ Generated ${outPath}`);
+});
